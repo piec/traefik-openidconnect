@@ -1,0 +1,47 @@
+diff -rau node_modules/express-openid-connect/lib/context.js node_modules_ok/express-openid-connect/lib/context.js
+--- node_modules/express-openid-connect/lib/context.js	1985-10-26 09:15:00.000000000 +0100
++++ node_modules_ok/express-openid-connect/lib/context.js	2020-11-27 16:29:19.572626006 +0100
+@@ -155,9 +155,11 @@
+     return weakRef(this).config.errorOnRequiredAuth;
+   }
+ 
+-  getRedirectUri() {
++  getRedirectUri(req) {
+     const { config } = weakRef(this);
+-    return urlJoin(config.baseURL, config.routes.callback);
++    const url = urlJoin('https://', req.header('x-forwarded-host'), config.routes.callback);
++    debug(`url=${url}`);
++    return url;
+   }
+ 
+   silentLogin(options) {
+@@ -178,7 +180,7 @@
+       returnTo = options.returnTo;
+       debug('req.oidc.login() called with returnTo: %s', returnTo);
+     } else if (req.method === 'GET' && req.originalUrl) {
+-      returnTo = req.originalUrl;
++      returnTo = urlJoin('https://', req.header('x-forwarded-host'), req.header('x-forwarded-uri'));
+       debug('req.oidc.login() without returnTo, using: %s', returnTo);
+     }
+ 
+@@ -190,7 +192,7 @@
+ 
+     // Ensure a redirect_uri, merge in configuration options, then passed-in options.
+     options.authorizationParams = {
+-      redirect_uri: this.getRedirectUri(),
++      redirect_uri: this.getRedirectUri(req),
+       ...config.authorizationParams,
+       ...options.authorizationParams,
+     };
+diff -rau node_modules/express-openid-connect/middleware/auth.js node_modules_ok/express-openid-connect/middleware/auth.js
+--- node_modules/express-openid-connect/middleware/auth.js	1985-10-26 09:15:00.000000000 +0100
++++ node_modules_ok/express-openid-connect/middleware/auth.js	2020-11-27 16:30:14.430703973 +0100
+@@ -81,7 +81,7 @@
+         }
+ 
+         try {
+-          const redirectUri = res.oidc.getRedirectUri();
++          const redirectUri = res.oidc.getRedirectUri(req);
+ 
+           let expectedState;
+           let tokenSet;
