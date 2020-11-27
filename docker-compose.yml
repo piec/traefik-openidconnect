@@ -1,0 +1,37 @@
+version: "3.7"
+services:
+  auth:
+    build: .
+    container_name: auth
+    init: true
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:3000:3000'
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.auth.rule=PathPrefix(`/forward-auth`)'
+      - 'traefik.http.routers.auth.priority=1000'
+      - 'traefik.http.services.auth.loadbalancer.server.port=3000'
+      - 'traefik.http.middlewares.oidc-auth.forwardauth.address=http://localhost:3000/forward-auth/traefik'
+    volumes:
+      - ./.env:/app/.env
+      #- ./index.js:/app/index.js    # for dev, with nodemon
+    #command: "npx nodemon index.js" # for dev
+    environment: # or use the .env file
+      # openid connect
+      - ISSUER_BASE_URL=https://accounts.google.com
+      - CLIENT_ID=
+      - CLIENT_SECRET=
+
+      # app settings
+      - BASE_URL=https://mydomain.com/ # to be removed?
+      - SECRET=random_string
+      #- DEBUG=express-openid-connect:*
+
+  whoami:
+    image: containous/whoami
+    restart: unless-stopped
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.whoami.rule=Host(`whoami.domain.com`)'
+      - 'traefik.http.routers.whoami.middlewares=oidc-auth'
